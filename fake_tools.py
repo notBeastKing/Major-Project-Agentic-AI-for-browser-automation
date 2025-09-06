@@ -48,9 +48,18 @@ def make_tools(page:Page):
         """use this function to get all the interacible UI elements to perform actions on
         """
         return 0
+    
+    @tool
+    async def ask_user(query):
+        """Use this function when you want further clarification from the user
+        about their prompt, 
+        this function takes in 1 argument thats the question you wannt to ask the user
+        returns their response
+        ALWAYS write their reponse into your context using write_to_context"""
+        return 0
 
     
     return[search_google, get_searchpage_links, 
            write_to_context, goto_link,
            get_page_text,get_interactive_element,
-           search_website]
+           search_website, ask_user]
