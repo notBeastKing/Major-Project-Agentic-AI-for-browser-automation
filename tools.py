@@ -51,7 +51,7 @@ async def get_searchpage_links(page: Page, why:list):
         )
         
         for item in items:
-            text = re.sub(r'\s+', ' ', item["text"])  # collapse all whitespace
+            text = re.sub(r'\s+', ' ', item["text"]) 
             results.append({
                 "text": text.strip(),
                 "href": item["href"]
@@ -81,7 +81,11 @@ async def goto_link(page:Page, url:list):
     await page.goto(url[0])
     return ("visited : " + str(url[0]))
 
+async def ask_user(page:Page, query:list):
+     user_response = input(query[0])
 
+     return ("user responded with : " + user_response)
+     
 async def get_interactive_element(page: Page, args: list):
     selectors = ("a, button, input, select, textarea, "
                  "[role=button], [role=link], [role=checkbox]")
@@ -92,6 +96,9 @@ async def get_interactive_element(page: Page, args: list):
         text = (await el.text_content() or "").strip()
         results.append({"tag": tag, "text": text})
     return results
+
+
+
 
 async def run_tool_function(page:Page,raw_output):
     cleaned = re.sub(r"```[a-zA-Z]*", "", raw_output.content).strip()
@@ -119,4 +126,5 @@ func_dict = {'search_google': search_google,
              'write_to_context': write_to_context, 
              'goto_link': goto_link,
              'get_page_text': get_page_text,
-             'get_interactive_element': get_interactive_element}
+             'get_interactive_element': get_interactive_element,
+             'ask_user':ask_user}
