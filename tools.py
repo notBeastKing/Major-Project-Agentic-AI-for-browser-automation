@@ -5,68 +5,59 @@ import json
 import time
 
 
-async def search_box(page:Page, query:list):
+async def search_google(page:Page, query:list):
+    if "https://www.google.com/" not in str(page.url):
+        await page.goto('https://www.google.com/')
 
-    if len(query) < 2:
-        query.append("yes")
-        
-    if query[1].lower() == 'yes':
-        if "https://www.google.com/" not in str(page.url):
-            await page.goto('https://www.google.com/')
-        await page.fill("textarea#APjFqb","")
-        await page.type("textarea#APjFqb", query[0], delay=40)
-        await page.press("textarea#APjFqb", "Enter")
-    else:
-        search_icon = page.locator('span[class = "leadingIcon"]')
-        count = await search_icon.count()
-        if count  > 0:
-           await search_icon.click()
-        search = page.get_by_placeholder("Search").first
-        await search.type(query[0], delay=40)
+    await page.fill("textarea#APjFqb","")
+    await page.type("textarea#APjFqb", query[0], delay=40)
+    await page.press("textarea#APjFqb", "Enter")
 
     await page.wait_for_load_state("domcontentloaded")
     return ("visited" + str(page.url))  
 
-async def get_searchpage_links(page:Page, why:list):
-    results = []
-    pretty_output = ""
-    containers = {
-         
-        "links_normal": page.locator('div[class = "s6JM6d ufC5Cb EYIWQc"]'),
-        "links_with_wesbite": page.locator('div[class = "ixix9e"]'),
-        "other_links" : page.locator('div[class = "YNk70c NbTBrb GyAeWb EyBRub tXI1nd"]')
-    }
+async def search_website(page:Page, query:list):
+    search_icon = page.locator('span[class = "leadingIcon"]')
+    count = await search_icon.count()
+    if count > 0:
+         await search_icon.click()
+
+    search = page.get_by_placeholder("Search").first
+    await search.type(query[0], delay=50)
+    await search.press("Enter")
+
+    await page.wait_for_load_state("domcontentloaded")
+    return ("visited" + str(page.url))  
+
+
+async def get_searchpage_links(page: Page, why:list):
+    containers = [
+        'div.s6JM6d.ufC5Cb.EYIWQc',
+        'div.ixix9e',
+        'div.YNk70c.NbTBrb.GyAeWb.EyBRub.tXI1nd'
+    ]
     
-    for name,container in containers.items():
-        if await container.count() == 0:
-            continue
-
-        links = container.get_by_role("link")
-        if await links.count() == 0:
-             continue
-
+    results = []
+    
+    for selector in containers:
+        links = page.locator(f"{selector} a")
         items = await links.evaluate_all(
             """
             elements => elements.map(ele => ({
-                text : ele.innerText.trim(),
-                href : ele.href
+                text: ele.innerText.trim(),
+                href: ele.href
             }))
             """
         )
-        for item in items:
-            temp_txt = item["text"]
-            temp_txt = re.sub(r'\n+', '" "', temp_txt)
-            results.append({
-                "container": name,
-                "text": temp_txt,
-                "href": item["href"]
-            })  
-
-        pretty_output = "\n".join(
-        f"{item['text'].strip()} -> {item['href']}"
-        for item in items)
         
-    return pretty_output
+        for item in items:
+            text = re.sub(r'\s+', ' ', item["text"])  # collapse all whitespace
+            results.append({
+                "text": text.strip(),
+                "href": item["href"]
+            })
+    
+    return results
 
 async def write_to_context(page:Page, text:list):
     context_file = open("context.txt", 'a', encoding='utf-8')
@@ -122,7 +113,8 @@ async def run_tool_function(page:Page,raw_output):
     return results
     
 
-func_dict = {'search_box': search_box, 
+func_dict = {'search_google': search_google,
+             'search_website': search_website, 
              'get_searchpage_links': get_searchpage_links, 
              'write_to_context': write_to_context, 
              'goto_link': goto_link,
