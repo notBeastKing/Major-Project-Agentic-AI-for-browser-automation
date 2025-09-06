@@ -4,15 +4,22 @@ from langchain_core.tools import tool
 def make_tools(page:Page):
 
     @tool
-    async def search_box(query):
+    async def search_google(query):
         """ Arguments:
-        1. query[0] = search text
-        2. query[1] = "yes" if Google, "no" if not (defaults to "yes" if missing)
-
-        This will search using the search box available on the page
+            the search text you want to search for IN GOOGLE, 
+            this function ONLY works for google searchs
         """
         return await page.press("textarea#APjFqb", 'Enter')
-   
+    
+    @tool
+    async def search_website(query):
+        """ Arguments:
+            The search text you want to search, 
+            this works ONLY INSIDE OTHER WEBSITES, like amazon , flipkart, reddit, cubelelo , etc etc 
+            ANY website except google
+        """
+        return await page.press("textarea#APjFqb", 'Enter')
+
     @tool
     async def get_searchpage_links():
         """ Return all links (text + href) from the current Google search results page. Use only on Google."""
@@ -43,6 +50,7 @@ def make_tools(page:Page):
         return 0
 
     
-    return[search_box, get_searchpage_links, 
+    return[search_google, get_searchpage_links, 
            write_to_context, goto_link,
-           get_page_text,get_interactive_element]
+           get_page_text,get_interactive_element,
+           search_website]
