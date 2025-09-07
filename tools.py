@@ -23,6 +23,7 @@ async def search_website(page:Page, query:list):
          await search_icon.click()
 
     search = page.get_by_placeholder("Search").first
+    await search.fill("")
     await search.type(query[0], delay=50)
     await search.press("Enter")
 
@@ -86,18 +87,55 @@ async def ask_user(page:Page, query:list):
 
      return ("user responded with : " + user_response)
      
-async def get_interactive_element(page: Page, args: list):
-    selectors = ("a, button, input, select, textarea, "
-                 "[role=button], [role=link], [role=checkbox]")
-    handles = await page.query_selector_all(selectors)
-    results = []
-    for el in handles:
-        tag = (await el.get_property("tagName")).json_value()
-        text = (await el.text_content() or "").strip()
-        results.append({"tag": tag, "text": text})
-    return results
+
+async def get_buttons(page: Page, why:list):
+
+    await page.mouse.wheel(0, 2000)
+    await page.mouse.wheel(0, -1000)
+    await page.wait_for_timeout(1000)
+    max_elements = 100
+    elements = await page.query_selector_all("a, button, [role='button'], [onclick]")
+    interactive_list = []
+    for i, el in enumerate(elements):
+            tag = await el.evaluate("node => node.tagName")
+           
+            raw_text = (await el.inner_text()) or (await el.get_attribute("aria-label")) or (await el.get_attribute("value")) or ""
+            raw_texttext = raw_text.strip()
+
+            if not raw_text:
+                continue  
+            
+            parts = [p.strip() for p in raw_text.splitlines() if p.strip()]
+            if parts:
+                text = parts[0] 
+            else:
+                text = raw_text
+
+            id_attr = (await el.get_attribute("id")) or ""
+            class_attr = (await el.get_attribute("class")) or ""
+            
+            interactive = {
+                "index": i,
+                "tag": tag,
+                "id": id_attr,
+                "class": class_attr,
+                "text": text
+            }
+
+            interactive_list.append(interactive)
+            if len(interactive_list) >= max_elements:
+                break
+
+    return interactive_list
 
 
+
+async def click_button(page:Page, args:list):
+    selector = args[0]['selector'].lower()
+    text = args[0]['text']
+    await page.locator(selector=selector, has_text=text).click()
+
+    return ("clicked + " + str(selector))
 
 
 async def run_tool_function(page:Page,raw_output):
@@ -126,5 +164,6 @@ func_dict = {'search_google': search_google,
              'write_to_context': write_to_context, 
              'goto_link': goto_link,
              'get_page_text': get_page_text,
-             'get_interactive_element': get_interactive_element,
-             'ask_user':ask_user}
+             'ask_user':ask_user,
+             'get_buttons':get_buttons,
+             'click_button': click_button}

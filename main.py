@@ -2,6 +2,7 @@ import asyncio
 from patchright.async_api import Playwright, async_playwright
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from pprint import pprint
 import tools as my_tools
 import fake_tools
 import utilities as util
@@ -29,7 +30,7 @@ async def llm_main(playwright: Playwright):
 
     #tools setup
     tools = fake_tools.make_tools(page=page)
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
     llm_with_tools = llm.bind_tools(tools=tools)
 
     #context setup
@@ -43,9 +44,13 @@ async def llm_main(playwright: Playwright):
     while in_use:
 
         print(raw_output.content)
-        res = await my_tools.run_tool_function(page, raw_output)
-
-        print(res)
+        try:
+            res = await my_tools.run_tool_function(page, raw_output)
+        except Exception as e:
+            print(f"function failed : {e}")
+            res = f"function failed : {e}"
+            
+        pprint(res)
         if 'llm_final' in res:
             print(res)
             in_use = False
