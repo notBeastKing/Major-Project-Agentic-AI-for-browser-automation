@@ -24,13 +24,22 @@ async def llm_main(playwright: Playwright):
 
     #setup
     google  = playwright.chromium
-    browser = await google.launch(headless= False, slow_mo= 500)
-    page = await browser.new_page()
+    browser = await google.launch(headless= False, slow_mo= 500, args=["--disable-blink-features=AutomationControlled"])
+    context = await browser.new_context(
+    viewport={"width": 1520, "height": 740},
+    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    locale="en-US",
+    color_scheme="light",
+    timezone_id="Asia/Kolkata",
+    java_script_enabled=True
+    )
+    context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    page = await context.new_page()
     await page.goto("https://www.google.com/")
-
+    
     #tools setup
     tools = fake_tools.make_tools(page=page)
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp")
     llm_with_tools = llm.bind_tools(tools=tools)
 
     #context setup

@@ -2,7 +2,19 @@ from playwright.async_api import Page
 from bs4 import BeautifulSoup
 import regex as re
 import json
-import time
+
+import asyncio
+import faiss
+import numpy as np
+from langchain_huggingface import HuggingFaceEmbeddings
+
+#seting up vector db
+embeddings = HuggingFaceEmbeddings(
+
+    model_name="BAAI/bge-base-en-v1.5",
+    model_kwargs={'device': 'cuda'},
+    encode_kwargs = {'normalize_embeddings' : True}  
+)
 
 
 async def search_google(page:Page, query:list):
@@ -14,6 +26,7 @@ async def search_google(page:Page, query:list):
     await page.press("textarea#APjFqb", "Enter")
 
     await page.wait_for_load_state("domcontentloaded")
+    await page.wait_for_load_state("networkidle")
     return ("visited" + str(page.url))  
 
 async def search_website(page:Page, query:list):
@@ -28,6 +41,7 @@ async def search_website(page:Page, query:list):
     await search.press("Enter")
 
     await page.wait_for_load_state("domcontentloaded")
+    await page.wait_for_load_state("networkidle")
     return ("visited" + str(page.url))  
 
 
@@ -78,65 +92,110 @@ async def get_page_text(page:Page, why:list):
 
 
 async def goto_link(page:Page, url:list):
-
     await page.goto(url[0])
+    await page.wait_for_load_state("domcontentloaded")
+    print("came here i think")
+    await asyncio.sleep(2)
     return ("visited : " + str(url[0]))
 
 async def ask_user(page:Page, query:list):
      user_response = input(query[0])
-
      return ("user responded with : " + user_response)
      
 
-async def get_buttons(page: Page, why:list):
+async def get_all_ui_elements(page: Page):
 
-    await page.mouse.wheel(0, 2000)
-    await page.mouse.wheel(0, -1000)
-    await page.wait_for_timeout(1000)
-    max_elements = 100
-    elements = await page.query_selector_all("a, button, [role='button'], [onclick]")
+    elements = await page.query_selector_all("a, button, input, select, textarea, form, [role='button'], [role='link'], [onclick]")
     interactive_list = []
+
     for i, el in enumerate(elements):
             tag = await el.evaluate("node => node.tagName")
            
-            raw_text = (await el.inner_text()) or (await el.get_attribute("aria-label")) or (await el.get_attribute("value")) or ""
-            raw_texttext = raw_text.strip()
-
-            if not raw_text:
+            raw_text = ((await el.inner_text()) 
+                    or (await el.get_attribute("aria-label")) 
+                    or (await el.get_attribute("value")) 
+                    or (await el.get_attribute("placeholder")) 
+                    or "")
+            
+            raw_text = raw_text.strip()
+            is_visible = await el.is_visible()
+            if not is_visible or (not raw_text and tag not in ["INPUT", "TEXTAREA", "SELECT", "FORM"]):
                 continue  
             
             parts = [p.strip() for p in raw_text.splitlines() if p.strip()]
-            if parts:
-                text = parts[0] 
-            else:
-                text = raw_text
+            text = parts[0] if parts else raw_text
 
             id_attr = (await el.get_attribute("id")) or ""
             class_attr = (await el.get_attribute("class")) or ""
-            
+            value  = (await el.get_attribute("value")) or ""
+            placeholder = (await el.get_attribute("placeholder")) or ""
+
             interactive = {
                 "index": i,
                 "tag": tag,
                 "id": id_attr,
                 "class": class_attr,
-                "text": text
+                "text": text,
+                "value": value,
+                "placeholder": placeholder,
+                "handle": el 
             }
 
             interactive_list.append(interactive)
-            if len(interactive_list) >= max_elements:
-                break
+
 
     return interactive_list
 
 
+async def get_ui_element(page:Page, query:list):
+    descriptions = []
+    element_map = []
+    quest = query[0]
+
+    interactables = await get_all_ui_elements(page=page)
+
+    for el in interactables:
+        if el["tag"] == "INPUT":
+            desc = f"Input field with placeholder '{el.get('placeholder')}' and current value '{el.get('value')}'"
+        elif el["tag"] == "TEXTAREA":
+            desc = f"Textarea with placeholder '{el.get('placeholder')}' and current value '{el.get('value')}'"
+        elif el["tag"] == "SELECT":
+            desc = f"Dropdown/select element with text '{el['text']}'"
+        elif el["tag"] == "FORM":
+            desc = f"Form element with id '{el['id']}' and class '{el['class']}'"
+        else:
+            desc = f"{el['tag']} element with text '{el['text']}'"
+
+        descriptions.append(desc)
+        element_map.append(el)
+    
+    doc_embeddings = embeddings.embed_documents(descriptions)
+    doc_embeddings = np.array(doc_embeddings, dtype="float32")
+
+    d = doc_embeddings.shape[1] 
+    index = faiss.IndexFlatIP(d)  
+    index.add(doc_embeddings)
+
+    similar_ui = []
+
+    q_emb = np.array([embeddings.embed_query(quest)], dtype="float32")
+    D, I = index.search(q_emb, k=3)
+    for dist, idx in zip(D[0], I[0]):
+        entry = {
+            "description": descriptions[idx],
+            "element": element_map[idx],
+            "similarity": float(dist)
+        }
+        similar_ui.append(entry)
+
+    return similar_ui
 
 async def click_button(page:Page, args:list):
-    selector = args[0]['selector'].lower()
-    text = args[0]['text']
+    selector = args[0].lower()
+    text = args[1]
     await page.locator(selector=selector, has_text=text).click()
 
     return ("clicked + " + str(selector))
-
 
 async def run_tool_function(page:Page,raw_output):
     cleaned = re.sub(r"```[a-zA-Z]*", "", raw_output.content).strip()
@@ -165,5 +224,5 @@ func_dict = {'search_google': search_google,
              'goto_link': goto_link,
              'get_page_text': get_page_text,
              'ask_user':ask_user,
-             'get_buttons':get_buttons,
-             'click_button': click_button}
+             'click_button': click_button,
+             'get_ui_element': get_ui_element}

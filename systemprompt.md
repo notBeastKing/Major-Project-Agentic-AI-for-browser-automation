@@ -77,6 +77,10 @@ Provide final answer when:
 
 ## Context Information (Available Each Step):
 - Current URL: {curr_url}  
-- Previous 5 actions taken by you: {prev_responses}  
+
+- Previous 10 actions taken by you: {prev_responses}  
+
 - Context file: {context}  
-- Previous Tool response: {tool_resp}
+
+- Previous Tool response YOU WILL HAVE TO ANALYZE THIS TO PERFORM YOUR NEXT STEP: 
+{tool_resp}

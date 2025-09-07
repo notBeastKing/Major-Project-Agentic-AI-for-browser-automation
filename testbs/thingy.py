@@ -5,53 +5,88 @@ import pprint
 import time
 from bs4 import BeautifulSoup
 import regex as re  
+import faiss
+import numpy as np
+from langchain_huggingface import HuggingFaceEmbeddings
+
+embeddings = HuggingFaceEmbeddings(
+
+    model_name="BAAI/bge-base-en-v1.5",
+    model_kwargs={'device': 'cuda'},
+    encode_kwargs = {'normalize_embeddings' : True}  
+)
 
 async def llm_main(playwright: Playwright):
-    google  = playwright.chromium
-    browser = await google.launch(headless= False, slow_mo= 500)
+    descriptions = []
+    element_map = []  
+
+    google = playwright.chromium
+    browser = await google.launch(headless=False, slow_mo=500)
     page = await browser.new_page()
-    await page.goto('https://www.myntra.com')
-    max_elements = 50
-    # Find all clickable elements
+    await page.goto(r'https://www.flipkart.com/search?q=laptops%20rtx%204050&as-show=on&as=off')
+
+    resp = await tools.get_ui_element(page=page, query=["GIGABYTE G5 MF5-H2IN353KH Intel Core i7"])
+
+    print(resp)
+
+    # selectors = ("a, button, input, select, textarea, "
+    #              "[role=button], [role=link], [role=checkbox]")
     
-    elements = await page.query_selector_all("a, button, [role='button'], [onclick]")
-    interactive_list = []
-    for i, el in enumerate(elements):
-            tag = await el.evaluate("node => node.tagName")
-           
-            raw_text = (await el.inner_text()) or (await el.get_attribute("aria-label")) or (await el.get_attribute("value")) or ""
-            raw_texttext = raw_text.strip()
+    # handles = await page.query_selector_all(selectors)
+    # results = []
+    # for el in handles:
+    #     tag = await (await el.get_property("tagName")).json_value()
+    #     text = (await el.text_content() or "").strip()
 
-            if not raw_text:
-                continue  
-            
-            parts = [p.strip() for p in raw_text.splitlines() if p.strip()]
-            if parts:
-                text = parts[0] 
-            else:
-                text = raw_text
+    #     if tag.upper() == "INPUT":
+    #         value = await (await el.get_property("value")).json_value()
+    #         placeholder = await el.get_attribute("placeholder")
+    #         results.append({
+    #             "tag": tag,
+    #             "text": text,
+    #             "value": value,
+    #             "placeholder": placeholder,
+    #             "handle": el  # keep Playwright handle
+    #         })
+    #     elif text != "":
+    #         results.append({
+    #             "tag": tag,
+    #             "text": text,
+    #             "handle": el
+    #         })
+    
+    # # Build descriptions + map
+    # descriptions = []
+    # element_map = []
 
-            id_attr = (await el.get_attribute("id")) or ""
-            class_attr = (await el.get_attribute("class")) or ""
-            
-            interactive = {
-                "index": i,
-                "tag": tag,
-                "id": id_attr,
-                "class": class_attr,
-                "text": text
-            }
+    # for el in results:
+    #     if el["tag"].upper() == "INPUT":
+    #         desc = f"Input field with placeholder '{el.get('placeholder')}' and current value '{el.get('value')}'"
+    #     else:
+    #         desc = f"{el['tag']} element with text '{el['text']}'"
 
-            interactive_list.append(interactive)
-            if len(interactive_list) >= max_elements:
-                break
-   
-    print(interactive_list)
-    trying = interactive_list[90]
-    clicking = page.locator(trying['tag'].lower(), has_text=trying['text'])
-    await clicking.click()
-    time.sleep(90)
-  
+    #     descriptions.append(desc)
+    #     element_map.append(el)
+
+    # # Build FAISS index
+    # doc_embeddings = embeddings.embed_documents(descriptions)
+    # doc_embeddings = np.array(doc_embeddings, dtype="float32")
+
+    # d = doc_embeddings.shape[1]  # embedding dimension
+    # index = faiss.IndexFlatIP(d)  # cosine similarity (since normalized)
+    # index.add(doc_embeddings)
+
+    # # Example query
+    # query = "GIGABYTE G5 MF5-H2IN353KH Intel Core i7"
+    # q_emb = np.array([embeddings.embed_query(query)], dtype="float32")
+
+    # D, I = index.search(q_emb, k=3)
+    # for idx in I[0]:
+    #     print("Match:", descriptions[idx])
+    #     print("Raw element:", element_map[idx])
+    
+    
+    
     
 
 

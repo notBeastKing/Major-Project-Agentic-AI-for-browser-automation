@@ -44,17 +44,16 @@ def make_tools(page:Page):
         return 0
     
     @tool
-    async def get_buttons():
-        """
-        takes no arguments
-        this will give you ALL the playwright selectors and text associated with a button 
-        from a webpage, you can analyze this and decide which buttont to press"""
-        return 0
+    async def get_ui_element(query):
+        """you can use this function to query for UI elements, eg query : "where do i click login "
+        it will return the TOP 3 matches with the tag, the text, class, playwright handle etc etc, which you can use to analyze
+        eg2 : "where to click bestsellers" will return the top 3 matches for you to choose again,
+        **IMPORTANT** ALWAYS use get page text so YOU CAN DECIDE WHAT TEXT TO QUERY FOR"""
     
     @tool
     async def click_button(selector: str, text: str):
         """argument should be a python dict
-        Arguments it will take in 2 arguments {tag : "a.nav_a", text : "Privacy Notice" } clicks button with a tag and class nav_a and text privacy notice
+        Arguments it will take in 2 arguments {"a.nav_a", "Privacy Notice" } clicks button with a tag and class nav_a and text privacy notice
         use to click button it will take in a selector and a the text associated with it, CANNOT be used for dropdowns and select tags"""
         return 0
 
@@ -74,4 +73,4 @@ def make_tools(page:Page):
            write_to_context, goto_link,
            get_page_text,
            search_website, ask_user,
-           get_buttons, click_button]
+           get_ui_element, click_button]
