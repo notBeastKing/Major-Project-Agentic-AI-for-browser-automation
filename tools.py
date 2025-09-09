@@ -1,4 +1,4 @@
-from playwright.async_api import Page
+from patchright.async_api import Page
 from bs4 import BeautifulSoup
 import regex as re
 import json
@@ -25,7 +25,7 @@ async def search_google(page:Page, query:list):
     await page.type("textarea#APjFqb", query[0], delay=40)
     await page.press("textarea#APjFqb", "Enter")
 
-    await page.wait_for_load_state("domcontentloaded")
+    await page.wait_for_load_state("domcontentloaded", timeout= 10000)
     await page.wait_for_load_state("networkidle")
     return ("visited" + str(page.url))  
 
@@ -36,12 +36,12 @@ async def search_website(page:Page, query:list):
          await search_icon.click()
 
     search = page.get_by_placeholder("Search").first
+
     await search.fill("")
     await search.type(query[0], delay=50)
     await search.press("Enter")
 
     await page.wait_for_load_state("domcontentloaded")
-    await page.wait_for_load_state("networkidle")
     return ("visited" + str(page.url))  
 
 
@@ -93,8 +93,7 @@ async def get_page_text(page:Page, why:list):
 
 async def goto_link(page:Page, url:list):
     await page.goto(url[0])
-    await page.wait_for_load_state("domcontentloaded")
-    print("came here i think")
+    await page.wait_for_load_state("domcontentloaded", timeout= 10000)
     await asyncio.sleep(2)
     return ("visited : " + str(url[0]))
 
@@ -195,7 +194,7 @@ async def click_button(page:Page, args:list):
     text = args[1]
     await page.locator(selector=selector, has_text=text).click()
 
-    return ("clicked + " + str(selector))
+    return ("clicked + " + str(selector + text))
 
 async def run_tool_function(page:Page,raw_output):
     cleaned = re.sub(r"```[a-zA-Z]*", "", raw_output.content).strip()

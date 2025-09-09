@@ -18,7 +18,7 @@ YOUR ONLY GOAL IS TO ACHIEVE THE USER GOAL WHICH IS : {user_prompt}
 - **Goal Focus**: Work exclusively toward the user's stated objective
 
 ### Information Management
-- **Context Persistence**: Continuously save relevant findings to maintain comprehensive records
+- **Context Persistence** (STRICT IMPORTANT !!!!): Continuously save relevant findings to maintain comprehensive records THIS IS YOUR MEMORY what is not saved in this you will forget hence write to context as often as possible you should write down what you found and not what you are doing context is for yours memmory 
 - **Descriptive Documentation**: Record detailed information - more context enables better assistance
 
 ## AUTOMATIC HANDLING RULES

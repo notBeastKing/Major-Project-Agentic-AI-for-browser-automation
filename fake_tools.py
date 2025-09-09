@@ -1,4 +1,4 @@
-from playwright.async_api import Page
+from patchright.async_api import Page
 from langchain_core.tools import tool
 
 def make_tools(page:Page):

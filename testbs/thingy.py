@@ -23,9 +23,9 @@ async def llm_main(playwright: Playwright):
     google = playwright.chromium
     browser = await google.launch(headless=False, slow_mo=500)
     page = await browser.new_page()
-    await page.goto(r'https://www.flipkart.com/search?q=laptops%20rtx%204050&as-show=on&as=off')
+    await page.goto(r'https://www.flipkart.com/search?q=5060%20rtx%20laptops&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=on&as=off')
 
-    resp = await tools.get_ui_element(page=page, query=["GIGABYTE G5 MF5-H2IN353KH Intel Core i7"])
+    resp = await tools.get_ui_element(page=page, query=["MSI Crosshair 16 HX AI Intel Core Ultra 9"])
 
     print(resp)
 
